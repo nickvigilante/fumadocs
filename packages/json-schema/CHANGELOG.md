@@ -1,13 +1,8 @@
----
-subject: JSON Schema toolkit
-packages:
-  npm:@fumadocs/json-schema: minor
-  npm:fumadocs-openapi: major
-  npm:@fumadocs/asyncapi: major
-  npm:@fumadocs/graphql: major
----
+## @fumadocs/json-schema@0.2.0
 
-## `@fumadocs/json-schema`
+### JSON Schema toolkit
+
+#### `@fumadocs/json-schema`
 
 The JSON Schema utilities of API pages are now their own package, with no Fumadocs dependencies:
 
@@ -33,7 +28,7 @@ They were `@fumadocs/api-docs/schema/*` before, and the API was cleaned up while
 
 `fumadocs-openapi` and `@fumadocs/asyncapi` no longer export `ParsedSchema`, import `JsonSchema` from `@fumadocs/json-schema` instead.
 
-## Opt into code usages and TypeScript definitions
+#### Opt into code usages and TypeScript definitions
 
 `createOpenAPIPage()` and `<OpenAPIProvider />` from `fumadocs-openapi/headless` no longer register the default code usage generators and TypeScript definitions, so a headless page doesn't bundle them:
 
@@ -51,7 +46,7 @@ createOpenAPIPage({
 
 With that, `fumadocs-openapi/headless/base` is gone — it only existed to skip those defaults.
 
-## Remove `useStorageKey()`
+#### Remove `useStorageKey()`
 
 The hook returned `(name) => storageKeyPrefix + name`. Read the prefix from the page instead:
 
@@ -62,7 +57,7 @@ localStorage.getItem(`${storageKeyPrefix}my-key`);
 
 `useAsyncAPI()` works the same way.
 
-## `@fumadocs/api-docs` is no longer published
+#### `@fumadocs/api-docs` is no longer published
 
 It held the UI the integrations share, and that UI is now either bundled into them or installed with Fumadocs CLI, so nothing imports it by name any more. If you imported it directly:
 

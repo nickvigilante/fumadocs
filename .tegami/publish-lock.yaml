@@ -1,210 +1,186 @@
 core:changelogs:
-  - content: "---\npackages:\n  npm:@fumadocs/api-docs:\n    type: patch\n  npm:@fumadocs/asyncapi:\n    type: patch\n  npm:@fumadocs/base-ui:\n    type: patch\n  npm:@fumadocs/basehub:\n    type: patch\n  npm:@fumadocs/cli:\n    type: patch\n  npm:@fumadocs/content:\n    type: patch\n  npm:@fumadocs/content-collections:\n    type: patch\n  npm:@fumadocs/graphql:\n    type: patch\n  npm:@fumadocs/language:\n    type: patch\n  npm:@fumadocs/local-content:\n    type: patch\n  npm:@fumadocs/local-html:\n    type: patch\n  npm:@fumadocs/local-md:\n    type: patch\n  npm:@fumadocs/mdx-remote:\n    type: patch\n  npm:@fumadocs/sanity:\n    type: patch\n  npm:@fumadocs/satteri:\n    type: patch\n  npm:@fumadocs/shadcn:\n    type: patch\n  npm:@fumadocs/story:\n    type: patch\n  npm:@fumadocs/tailwind:\n    type: patch\n  npm:@fumari/image-size:\n    type: patch\n  npm:@fumari/stf:\n    type: patch\n  npm:create-fumadocs-app:\n    type: patch\n  npm:fumadocs-docgen:\n    type: patch\n  npm:fumadocs-epub:\n    type: patch\n  npm:fumadocs-mdx:\n    type: patch\n  npm:fumadocs-obsidian:\n    type: patch\n  npm:fumadocs-openapi:\n    type: patch\n  npm:fumadocs-python:\n    type: patch\n  npm:fumadocs-twoslash:\n    type: patch\n  npm:fumadocs-typescript:\n    type: patch\n  npm:fumadocs-ui:\n    type: patch\n---\n\n## Mark packages side-effect free\n\nAll packages now declare `sideEffects` in `package.json`, so bundlers can tree-shake unused modules. Packages shipping stylesheets list them as side effects to keep CSS imports.\n"
-    filename: 2026-09-14-side-effects.md
+  - content: "---\nsubject: Headless AsyncAPI pages\npackages:\n  npm:@fumadocs/asyncapi:\n    type: minor\n---\n\n## Headless API pages\n\nAPI pages are now built on a headless layer, use it to build your own UI:\n\n- `createAsyncAPIPage()` and `<AsyncAPIProvider />` with your own components.\n- the hooks of pages and operations: `useAsyncAPI()`, `useComponents()`, `useServer()`, `useOperation()` and `useOperationSecurity()`.\n\n```tsx title=\"components/api-page.tsx\"\n'use client';\nimport { createAsyncAPIPage } from '@fumadocs/asyncapi/headless';\n\nexport const AsyncAPIPage = createAsyncAPIPage({\n  components: { Operation, Markdown, CodeBlock, Heading, SchemaUI },\n});\n```\n\nSee [Headless](https://fumadocs.dev/docs/integrations/asyncapi/headless).\n\n`@fumadocs/asyncapi/ui` is unchanged, it now renders through the layer.\n\n## Install the UI\n\nThe UI of API pages can be installed with Fumadocs CLI and edited:\n\n```npm\nnpx @fumadocs/cli add fumadocs/asyncapi/page\n```\n\n```tsx title=\"components/api-page.tsx\"\n'use client';\nimport { createAsyncAPIPageBase } from '@/components/api/asyncapi/page';\nimport { defaultShikiFactory } from 'fumadocs-core/highlight/shiki/full';\n\nexport const AsyncAPIPage = createAsyncAPIPageBase({ shiki: defaultShikiFactory });\n```\n\nTo replace parts of it, install `fumadocs/asyncapi/operation` or `fumadocs/api-docs/schema` and pass them to the new `components` options:\n\n```tsx\nexport const AsyncAPIPage = createAsyncAPIPage({\n  components: { Operation, SchemaUI: Schema },\n});\n```\n\n## Remove `generateTypeScriptDefinitions`\n\nThe option was never rendered by API pages, and it is gone with its `@fumari/json-schema-ts` dependency. Passing it is now a type error, nothing else changes.\n"
+    filename: 2026-09-16-asyncapi-headless.md
     v: 0.0.0
-  - content: "---\npackages:\n  npm:fumadocs-ui:\n    type: patch\n  npm:@fumadocs/base-ui:\n    type: patch\n---\n\n## Shadcn UI compatible primitives\n\nThe primitives in `fumadocs-ui/components/ui/*` now follow the API of Shadcn UI, so components installed by the CLI can use the ones you already have.\n\n`buttonVariants` accepts the `default` variant of Shadcn UI:\n\n```tsx\nbuttonVariants({ variant: 'default', size: 'sm' });\n```\n\n`primary` and the `color` alias still work.\n\n`fumadocs-ui/components/ui/scroll-area` is removed, the sidebars render the scroll area primitives directly.\n"
-    filename: 2026-09-13-shadcn-compatible-primitives.md
+  - content: "---\nsubject: Shared components of API pages\npackages:\n  npm:fumadocs-openapi:\n    type: patch\n  npm:@fumadocs/asyncapi:\n    type: patch\n  npm:@fumadocs/graphql:\n    type: patch\n  npm:@fumadocs/story:\n    type: patch\n---\n\n## Default page components\n\n`createOpenAPIPage()`, `createAsyncAPIPage()` and `createGraphQLPage()` now fill the `Markdown`, `CodeBlock` and `Heading` components you didn't pass, rendering Markdown through Remark and code blocks through the `shiki` option:\n\n```tsx\ncreateOpenAPIPage({\n  shiki: defaultShikiFactory,\n  components: { SchemaUI, Operation },\n});\n```\n\n`shiki` is optional — without it, code blocks render unhighlighted.\n\n## Installable UI\n\nThe UI an API page renders through is now part of the installation, instead of being imported from the package:\n\n| Component                                                                                   | Installed at                               |\n| ------------------------------------------------------------------------------------------- | ------------------------------------------ |\n| `Select`, `Input`                                                                           | `components/ui`, reusing the project's own |\n| `Accordion`, `Collapsible`, `Dialog`, `Popover`, `Spinner`, `SelectTabs`, playground inputs | `components/api/ui`                        |\n| anchor IDs of deep-linkable sections                                                        | `components/api/ui/auto-anchor`            |\n\n`Select` and `Input` follow the Shadcn UI API, so a project that already has them keeps its own. `@fumadocs/story` no longer ships a second copy of either.\n\n`labelVariants` moved to the installed `label` component, leaving the input a plain Shadcn-compatible primitive.\n\nThe integrations share one implementation of these internally, instead of each keeping a copy: the selected server and its variables, the state of an async request, the coloured label of methods and kinds, and the plain-object check of both schema layers.\n\nThe request pipeline of the playground stays in the package too — `encodeRequestData()`, `resolveMediaAdapter()`, `createBrowserFetcher()`, `getPreferredType()` and the request data types are exported from `fumadocs-openapi/headless`, so an installed playground drives them instead of copying them.\n"
+    filename: 2026-09-16-shared-page-components.md
     v: 0.0.0
-  - content: "---\npackages:\n  npm:@fumadocs/cli:\n    type: patch\n---\n\n## Reuse your Shadcn UI components\n\nOn projects with a `components.json`, the CLI leaves the `button`, `popover` and `collapsible` of your `ui` directory as they are and imports them from installed components, they share the API of Shadcn UI. `cn` is imported from your `utils` alias instead of a new `lib/cn.ts`, configurable in `cli.json`:\n\n```json\n{\n  \"aliases\": {\n    \"utils\": \"./lib/utils\"\n  }\n}\n```\n\nFumadocs' copies are only installed when you don't have them yet. The `tabs` and `accordion` primitives are Fumadocs specific, they are installed next to their components instead of the `ui` directory.\n\n- `customize` updates the imports of your route files to the installed layouts.\n- `feature ai` and `feature feedback` install the primitives of your configured `uiLibrary`, they always used the Radix UI ones before.\n"
-    filename: 2026-09-13-cli-shadcn.md
+  - content: "---\nsubject: JSON Schema toolkit\npackages:\n  npm:@fumadocs/json-schema:\n    type: minor\n  npm:fumadocs-openapi:\n    type: major\n  npm:@fumadocs/asyncapi:\n    type: major\n  npm:@fumadocs/graphql:\n    type: major\n---\n\n## `@fumadocs/json-schema`\n\nThe JSON Schema utilities of API pages are now their own package, with no Fumadocs dependencies:\n\n```ts\nimport { dereference, matches, mergeAllOf, sample, stringify } from '@fumadocs/json-schema';\nimport { bundle } from '@fumadocs/json-schema/bundle';\n```\n\n`bundle()` is a separate entry because it reads files and URLs, everything else runs in the browser.\n\n`@fumadocs/json-schema/react` renders a schema into the data an API page draws — `generateSchemaUI()` with the `SchemaData` and `InfoTag` types. It was in the Schema UI before, where every install copied it.\n\nThey were `@fumadocs/api-docs/schema/*` before, and the API was cleaned up while moving:\n\n| Before                                         | Now                                    |\n| ---------------------------------------------- | -------------------------------------- |\n| `ParsedSchema`                                 | `JsonSchema`                           |\n| `NoReference` / `NoReferenceSwallow`           | `Dereferenced` / `DereferencedShallow` |\n| `dereferenceShallow(schema)`                   | `dereference(schema)`                  |\n| `matchesSchema(schema, value)`                 | `matches(schema, value)`               |\n| `typeMatches(value, type)`                     | `matchesType(value, type)`             |\n| `schemaToString(schema, FormatFlags.UseAlias)` | `stringify(schema, { alias: true })`   |\n\n`fumadocs-openapi` and `@fumadocs/asyncapi` no longer export `ParsedSchema`, import `JsonSchema` from `@fumadocs/json-schema` instead.\n\n## Opt into code usages and TypeScript definitions\n\n`createOpenAPIPage()` and `<OpenAPIProvider />` from `fumadocs-openapi/headless` no longer register the default code usage generators and TypeScript definitions, so a headless page doesn't bundle them:\n\n```tsx\nimport { createCodeUsageGeneratorRegistry } from 'fumadocs-openapi/requests/generators';\nimport { registerDefault } from 'fumadocs-openapi/requests/generators/all';\n\ncreateOpenAPIPage({\n  codeUsages: registerDefault(createCodeUsageGeneratorRegistry()),\n  components: { ... },\n});\n```\n\n`fumadocs-openapi/ui` is unchanged, it registers both for you.\n\nWith that, `fumadocs-openapi/headless/base` is gone — it only existed to skip those defaults.\n\n## Remove `useStorageKey()`\n\nThe hook returned `(name) => storageKeyPrefix + name`. Read the prefix from the page instead:\n\n```tsx\nconst { storageKeyPrefix } = useOpenAPI();\nlocalStorage.getItem(`${storageKeyPrefix}my-key`);\n```\n\n`useAsyncAPI()` works the same way.\n\n## `@fumadocs/api-docs` is no longer published\n\nIt held the UI the integrations share, and that UI is now either bundled into them or installed with Fumadocs CLI, so nothing imports it by name any more. If you imported it directly:\n\n| Before                                     | Now                                                  |\n| ------------------------------------------ | ---------------------------------------------------- |\n| `@fumadocs/api-docs/schema/*`              | `@fumadocs/json-schema`                              |\n| `@fumadocs/api-docs/components/schema*`    | `npx @fumadocs/cli add fumadocs/api-docs/schema`     |\n| `@fumadocs/api-docs/components/*` (the UI) | installed with the component that uses it            |\n| `@fumadocs/api-docs/i18n`                  | the integration's own `Translations` covers its keys |\n| `@fumadocs/api-docs/css/preset.css`        | already included by the integration's preset         |\n\nThe CLI namespace is unchanged, `fumadocs/api-docs/schema` still installs the Schema UI.\n"
+    filename: 2026-09-19-json-schema.md
+    v: 0.0.0
+  - content: "---\npackages:\n  npm:fumadocs-core:\n    type: patch\n---\n\n## Fix `filterElement` being ignored by `remarkLLMs`\n\n`remarkLLMs` wrote its own `filterElement` over yours, so the option did nothing:\n\n```ts\nremarkLLMs({\n  // never ran\n  filterElement: (node) => node.name !== 'Callout',\n});\n```\n\nYour function now runs for every node except `mdxjsEsm`, which stays excluded either way.\n\nFumadocs MDX passes this option through `postprocess.includeProcessedMarkdown`.\n"
+    filename: 2026-09-16-llms-filter-element.md
+    v: 0.0.0
+  - content: "---\nsubject: Headless GraphQL pages\npackages:\n  npm:@fumadocs/graphql:\n    type: minor\n---\n\n## Headless layer\n\nGraphQL pages are now built on a headless layer, use it to build your own UI:\n\n```tsx title=\"components/api-page.tsx\"\n'use client';\nimport { createGraphQLPage } from '@fumadocs/graphql/headless';\n\nexport const GraphQLPage = createGraphQLPage({\n  components: { Operation, TypeDocs, Markdown, CodeBlock, Heading, SchemaUI },\n});\n```\n\n- `<GraphQLProvider />` holds the schema built from SDL, the page links and your components.\n- `<OperationProvider />` and `useOperation()` derive an operation: its `field`, `title`, `directives` and generated `example`.\n- `<TypeProvider />` and `useNamedType()` derive a named type: its `kind`, `directives`, `relations` and usages.\n- `useGraphQL()`, `useComponents()`, `useTypeLink()` and `useOperationLink()` expose the page state.\n- `generateRequestSnippets()` builds the cURL and `fetch` snippets of an example.\n\n`@fumadocs/graphql/ui` is built on it, its options and rendering are unchanged.\n\n## Install the UI\n\nThe UI of GraphQL pages can be installed with Fumadocs CLI and edited:\n\n```npm\nnpx @fumadocs/cli add fumadocs/graphql/page\n```\n\n```tsx title=\"components/api-page.tsx\"\n'use client';\nimport { createGraphQLPageBase } from '@/components/api/graphql/page';\nimport { defaultShikiFactory } from 'fumadocs-core/highlight/shiki/full';\n\nexport const GraphQLPage = createGraphQLPageBase({ shiki: defaultShikiFactory });\n```\n\nParts are installable too (`operation`, `type-docs`, `schema-ui`, `playground`) and passed to the new `components` options:\n\n```tsx\nexport const GraphQLPage = createGraphQLPage({\n  components: { Operation, TypeDocs },\n});\n```\n\nSee [Headless](https://fumadocs.dev/docs/integrations/graphql/headless).\n\n## `@fumadocs/graphql/playground`\n\nThe playground is its own entry, so installing the operation or page UI no longer copies it, install `fumadocs/graphql/playground` when you want to own it. `inputTypeToJsonSchema()`, which turns GraphQL input types into the form's JSON Schema, is exported from `@fumadocs/graphql/headless`.\n"
+    filename: 2026-09-16-graphql-headless.md
+    v: 0.0.0
+  - content: "---\npackages:\n  npm:fumadocs-mdx:\n    type: patch\n---\n\n## Fix the `_mdast` export with `removePosition`\n\n```ts\n// fumadocs-mdx collection config\npostprocess: {\n  includeMDAST: { removePosition: true },\n},\n```\n\nThis exported `_mdast` with no value, and `getMDAST()` then reported that `includeMDAST` was disabled. `removePosition` strips positions in place and returns nothing, so `JSON.stringify` received `undefined`.\n\nThe tree is now cloned, stripped, and serialized from the clone.\n"
+    filename: 2026-09-16-mdast-remove-position.md
+    v: 0.0.0
+  - content: "---\nsubject: Fumadocs OpenAPI v12\npackages:\n  npm:fumadocs-openapi:\n    type: major\n---\n\n## Headless API pages\n\nAPI pages are now built on a headless layer, use it to build your own UI:\n\n- `fumadocs-openapi/headless`: `createOpenAPIPage()` and `<OpenAPIProvider />` with your own components, and the hooks of pages and operations, like `useOperation()`, `useExampleRequests()` and `useServer()`.\n- the Schema UI, installed with `npx @fumadocs/cli add fumadocs/api-docs/schema`: its generation and navigation state (`generateSchemaUI()`, `useSchemaTabs()`) come with the copy.\n\nSee [Headless](https://fumadocs.dev/docs/integrations/openapi/headless).\n\n## Install the full UI\n\nThe entire UI of API pages can be installed with Fumadocs CLI:\n\n```npm\nnpx @fumadocs/cli add fumadocs/openapi/page\n```\n\n```tsx title=\"components/api-page.tsx\"\n'use client';\nimport { createOpenAPIPageBase } from '@/components/api/page';\nimport { defaultShikiFactory } from 'fumadocs-core/highlight/shiki/full';\n\nexport const OpenAPIPage = createOpenAPIPageBase({ shiki: defaultShikiFactory });\n```\n\nTo customise parts of it, install `fumadocs/openapi/operation` or `fumadocs/api-docs/schema`, and pass them to the new `components` options:\n\n```tsx\nexport const OpenAPIPage = createOpenAPIPage({\n  components: { Operation, SchemaUI: Schema },\n});\n```\n\n## Render custom inline code samples\n\nCode samples from `x-codeSamples` and `generateCodeSamples` are now rendered when their id isn't a built-in generator.\n\n## Data info tags in Schema UI\n\n`SchemaData.infoTags` entries are data rendered by the UI: `{ label, value, block? }` or `{ label, list }`. Custom nodes (`{ node }`) are still accepted, code reading `tag.node` must handle all shapes.\n\n## Migrate options of `createOpenAPIPage()`\n\nPass components to the `components` option:\n\n```diff\n createOpenAPIPage({\n-  schemaUI: { render: (props) => <Schema {...props} /> },\n-  renderHeading: (props, depth) => <Heading depth={depth} {...props} />,\n-  renderCodeBlock: (props) => <CodeBlock {...props} />,\n-  renderMarkdown: (md) => <Markdown md={md} />,\n+  components: { SchemaUI: Schema, Heading, CodeBlock, Markdown },\n });\n```\n\n- `playground.provider` is removed, the page provides the auth state of API playground.\n- `playground.render` and `generateTypeScriptDefinitions` no longer receive `ctx`, read the document from `useOpenAPI().doc`, or the `doc` passed to `generateTypeScriptDefinitions`.\n- `operation.APIExampleSelector` is removed, install `fumadocs/openapi/operation` and edit the selector in `usage-tabs.tsx`.\n- The `ctx` of `content` render options holds your options with the `schema` and `proxyUrl` of page. `ctx.SchemaUI` and `ctx._default_processMarkdown` are removed, use `useComponents()` in a component.\n\n## Migrate hooks\n\nThe hooks of `fumadocs-openapi/ui` are replaced by `fumadocs-openapi/headless`:\n\n| v11                     | v12                                                              |\n| ----------------------- | ---------------------------------------------------------------- |\n| `useRenderContext()`    | `useOpenAPI()` (`schema` is renamed to `doc`), `useComponents()` |\n| `useServerContext()`    | `useServer()`                                                    |\n| `useOperationContext()` | `useOperation()`, `useExampleRequests()`, `useExampleRequest()`  |\n\n```diff\n- const { route, examples, example, setExample, setExampleData } = useOperationContext();\n+ const { path } = useOperation();\n+ const { items, selected, select, update } = useExampleRequests();\n+ // data of the selected example, replaces `addListener()`\n+ const data = useExampleRequest();\n```\n\nComponents installed from v11 with Fumadocs CLI (e.g. the API playground) use the old hooks, reinstall them.\n\n## Remove deprecated APIs\n\n| Removed                                                    | Use                                                 |\n| ---------------------------------------------------------- | --------------------------------------------------- |\n| `fumadocs-openapi/ui/create-client`                        | `createOpenAPIPage()` from `fumadocs-openapi/ui`    |\n| `ApiPageProps`                                             | `OpenAPIPageProps`                                  |\n| `OperationItem` and `WebhookItem` of `fumadocs-openapi/ui` | import them from `fumadocs-openapi`                 |\n| `getAPIPageProps()` and `getClientAPIPageProps()`          | `getOpenAPIPageProps()`                             |\n| `defineI18nOpenAPI()`                                      | `i18n.translations().extend(openapiTranslations())` |\n| `APIPage` of MDX components                                | `OpenAPIPage`, generated files only render it       |\n"
+    filename: 2026-09-15-openapi-v12.md
+    v: 0.0.0
+  - content: "---\nsubject: Headless stories\npackages:\n  npm:@fumadocs/story:\n    type: minor\n---\n\n## Replace the UI of stories\n\nThe control panel is no longer fixed, `defineStoryFactory()` takes your own:\n\n```tsx title=\"lib/story.tsx\"\nimport { defineStoryFactory } from '@fumadocs/story/vite/client';\nimport { WithControl } from '@/components/story';\n\nexport const { defineStory } = defineStoryFactory({ WithControl });\n```\n\nInstall the built-in one and edit it:\n\n```npm\nnpx @fumadocs/cli add fumadocs/story/controls\n```\n\nOr build your own on `@fumadocs/story/headless`: `<StoryProvider />` holds the selected variant and the form engine, `useStory()` exposes the presets and `useStoryArgs()` the arguments of the rendered component.\n\nSee [Headless](https://fumadocs.dev/docs/integrations/story/headless).\n\n## Fix the initial branch of union controls\n\nThe control of a union prop validated the field against the index of each branch, so it picked an arbitrary one. It now validates against the current value, falling back to the first branch.\n\n`validate()` from `@fumadocs/story/type-tree` also rejected `null` for `null` nodes, it compared against the string `'null'`.\n"
+    filename: 2026-09-16-story-headless.md
     v: 0.0.0
 core:packages:
   - changelogIds:
-      - 2026-09-14-side-effects.md
-    id: npm:@fumadocs/api-docs
-    updated: true
-  - changelogIds:
-      - 2026-09-14-side-effects.md
+      - 2026-09-16-asyncapi-headless.md
+      - 2026-09-16-shared-page-components.md
+      - 2026-09-19-json-schema.md
     id: npm:@fumadocs/asyncapi
     updated: true
-  - changelogIds:
-      - 2026-09-13-shadcn-compatible-primitives.md
-      - 2026-09-14-side-effects.md
-    id: npm:@fumadocs/base-ui
+  - id: npm:@fumadocs/basehub
+    updated: false
+  - id: npm:@fumadocs/base-ui
+    updated: true
+  - id: npm:@fumadocs/cli
+    updated: false
+  - id: npm:@fumadocs/content
+    updated: false
+  - id: npm:@fumadocs/content-collections
+    updated: false
+  - id: npm:create-fumadocs-app
     updated: true
   - changelogIds:
-      - 2026-09-14-side-effects.md
-    id: npm:@fumadocs/basehub
-    updated: true
-  - changelogIds:
-      - 2026-09-13-cli-shadcn.md
-      - 2026-09-14-side-effects.md
-    id: npm:@fumadocs/cli
-    updated: true
-  - changelogIds:
-      - 2026-09-14-side-effects.md
-    id: npm:@fumadocs/content
-    updated: true
-  - changelogIds:
-      - 2026-09-14-side-effects.md
-    id: npm:@fumadocs/content-collections
-    updated: true
-  - id: npm:fumadocs-core
-    updated: true
-  - changelogIds:
-      - 2026-09-14-side-effects.md
-    id: npm:create-fumadocs-app
+      - 2026-09-16-llms-filter-element.md
+    id: npm:fumadocs-core
     updated: true
   - id: npm:create-fumadocs-versions
     updated: true
+  - id: npm:fumadocs-docgen
+    updated: false
+  - id: npm:fumadocs-epub
+    updated: false
   - changelogIds:
-      - 2026-09-14-side-effects.md
-    id: npm:fumadocs-docgen
-    updated: true
-  - changelogIds:
-      - 2026-09-14-side-effects.md
-    id: npm:fumadocs-epub
-    updated: true
-  - changelogIds:
-      - 2026-09-14-side-effects.md
+      - 2026-09-16-graphql-headless.md
+      - 2026-09-16-shared-page-components.md
+      - 2026-09-19-json-schema.md
     id: npm:@fumadocs/graphql
     updated: true
+  - id: npm:@fumari/image-size
+    updated: false
   - changelogIds:
-      - 2026-09-14-side-effects.md
-    id: npm:@fumari/image-size
+      - 2026-09-19-json-schema.md
+    id: npm:@fumadocs/json-schema
     updated: true
+  - id: npm:@fumadocs/language
+    updated: false
+  - id: npm:@fumadocs/local-html
+    updated: false
+  - id: npm:@fumadocs/local-content
+    updated: false
+  - id: npm:@fumadocs/local-md
+    updated: false
   - changelogIds:
-      - 2026-09-14-side-effects.md
-    id: npm:@fumadocs/language
-    updated: true
-  - changelogIds:
-      - 2026-09-14-side-effects.md
-    id: npm:@fumadocs/local-content
-    updated: true
-  - changelogIds:
-      - 2026-09-14-side-effects.md
-    id: npm:@fumadocs/local-html
-    updated: true
-  - changelogIds:
-      - 2026-09-14-side-effects.md
-    id: npm:@fumadocs/local-md
-    updated: true
-  - changelogIds:
-      - 2026-09-14-side-effects.md
+      - 2026-09-16-mdast-remove-position.md
     id: npm:fumadocs-mdx
     updated: true
-  - changelogIds:
-      - 2026-09-14-side-effects.md
-    id: npm:@fumadocs/mdx-remote
-    updated: true
+  - id: npm:@fumadocs/mdx-remote
+    updated: false
   - id: npm:@fumadocs/notion
     updated: false
-  - changelogIds:
-      - 2026-09-14-side-effects.md
-    id: npm:fumadocs-obsidian
-    updated: true
-  - changelogIds:
-      - 2026-09-14-side-effects.md
-    id: npm:fumadocs-openapi
-    updated: true
-  - id: npm:fumadocs-preview
+  - id: npm:fumadocs-obsidian
     updated: false
   - changelogIds:
-      - 2026-09-14-side-effects.md
-    id: npm:fumadocs-python
+      - 2026-09-15-openapi-v12.md
+      - 2026-09-16-shared-page-components.md
+      - 2026-09-19-json-schema.md
+    id: npm:fumadocs-openapi
     updated: true
-  - changelogIds:
-      - 2026-09-13-shadcn-compatible-primitives.md
-      - 2026-09-14-side-effects.md
-    id: npm:fumadocs-ui
+  - id: npm:fumadocs-python
+    updated: false
+  - id: npm:fumadocs-preview
+    updated: false
+  - id: npm:@fumadocs/sanity
+    updated: false
+  - id: npm:fumadocs-ui
     updated: true
-  - changelogIds:
-      - 2026-09-14-side-effects.md
-    id: npm:@fumadocs/sanity
+  - id: npm:@fumadocs/satteri
+    updated: false
+  - id: npm:@fumadocs/shadcn
+    updated: false
+  - id: npm:shared-api
     updated: true
+  - id: npm:@fumari/stf
+    updated: false
   - changelogIds:
-      - 2026-09-14-side-effects.md
-    id: npm:@fumadocs/satteri
-    updated: true
-  - changelogIds:
-      - 2026-09-14-side-effects.md
-    id: npm:@fumadocs/shadcn
-    updated: true
-  - changelogIds:
-      - 2026-09-14-side-effects.md
-    id: npm:@fumari/stf
-    updated: true
-  - changelogIds:
-      - 2026-09-14-side-effects.md
+      - 2026-09-16-shared-page-components.md
+      - 2026-09-16-story-headless.md
     id: npm:@fumadocs/story
     updated: true
-  - changelogIds:
-      - 2026-09-14-side-effects.md
-    id: npm:@fumadocs/tailwind
-    updated: true
-  - changelogIds:
-      - 2026-09-14-side-effects.md
-    id: npm:fumadocs-twoslash
-    updated: true
-  - changelogIds:
-      - 2026-09-14-side-effects.md
-    id: npm:fumadocs-typescript
-    updated: true
+  - id: npm:@fumadocs/tailwind
+    updated: false
+  - id: npm:fumadocs-typescript
+    updated: false
+  - id: npm:fumadocs-twoslash
+    updated: false
   - id: npm:@fumadocs/vite
     updated: false
 npm:packages:
-  - id: npm:@fumadocs/api-docs
   - id: npm:@fumadocs/asyncapi
-  - id: npm:@fumadocs/base-ui
   - id: npm:@fumadocs/basehub
+  - id: npm:@fumadocs/base-ui
   - id: npm:@fumadocs/cli
   - id: npm:@fumadocs/content
   - id: npm:@fumadocs/content-collections
-  - id: npm:fumadocs-core
   - id: npm:create-fumadocs-app
+  - id: npm:fumadocs-core
   - id: npm:create-fumadocs-versions
   - id: npm:fumadocs-docgen
   - id: npm:fumadocs-epub
   - id: npm:@fumadocs/graphql
   - id: npm:@fumari/image-size
+  - id: npm:@fumadocs/json-schema
   - id: npm:@fumadocs/language
-  - id: npm:@fumadocs/local-content
   - id: npm:@fumadocs/local-html
+  - id: npm:@fumadocs/local-content
   - id: npm:@fumadocs/local-md
   - id: npm:fumadocs-mdx
   - id: npm:@fumadocs/mdx-remote
   - id: npm:@fumadocs/notion
   - id: npm:fumadocs-obsidian
   - id: npm:fumadocs-openapi
-  - id: npm:fumadocs-preview
   - id: npm:fumadocs-python
-  - id: npm:fumadocs-ui
+  - id: npm:fumadocs-preview
   - id: npm:@fumadocs/sanity
+  - id: npm:fumadocs-ui
   - id: npm:@fumadocs/satteri
   - id: npm:@fumadocs/shadcn
+  - id: npm:shared-api
   - id: npm:@fumari/stf
   - id: npm:@fumadocs/story
   - id: npm:@fumadocs/tailwind
-  - id: npm:fumadocs-twoslash
   - id: npm:fumadocs-typescript
+  - id: npm:fumadocs-twoslash
   - id: npm:@fumadocs/vite
   - id: npm:docs
-  - id: npm:example-astro
+  - id: npm:example-openapi
+  - id: npm:example-tanstack-start-openapi
   - id: npm:example-asyncapi
+  - id: npm:example-graphql
+  - id: npm:example-astro
   - id: npm:example-base-ui
   - id: npm:example-content-collections
-  - id: npm:example-graphql
   - id: npm:example-i18n
-  - id: npm:example-marble-cms
   - id: npm:example-next
+  - id: npm:example-marble-cms
   - id: npm:example-next-local-html
-  - id: npm:example-next-local-md
   - id: npm:example-next-min
-  - id: npm:example-next-static
+  - id: npm:example-next-local-md
   - id: npm:example-next-shadcn
+  - id: npm:example-next-static
   - id: npm:example-obsidian
-  - id: npm:example-openapi
-  - id: npm:example-python
-  - id: npm:example-react-router
   - id: npm:example-react-router-i18n
+  - id: npm:example-python
   - id: npm:example-react-router-min
+  - id: npm:example-react-router
   - id: npm:example-react-router-rsc
   - id: npm:example-react-router-spa
   - id: npm:example-tanstack-start
   - id: npm:example-tanstack-start-i18n
   - id: npm:example-tanstack-start-local-md
   - id: npm:example-tanstack-start-min
-  - id: npm:example-tanstack-start-openapi
   - id: npm:example-tanstack-start-spa
   - id: npm:example-tanstack-start-story
   - id: npm:example-waku

@@ -1,3 +1,202 @@
+## fumadocs-openapi@12.0.0
+
+### Fumadocs OpenAPI v12
+
+#### Headless API pages
+
+API pages are now built on a headless layer, use it to build your own UI:
+
+- `fumadocs-openapi/headless`: `createOpenAPIPage()` and `<OpenAPIProvider />` with your own components, and the hooks of pages and operations, like `useOperation()`, `useExampleRequests()` and `useServer()`.
+- the Schema UI, installed with `npx @fumadocs/cli add fumadocs/api-docs/schema`: its generation and navigation state (`generateSchemaUI()`, `useSchemaTabs()`) come with the copy.
+
+See [Headless](https://fumadocs.dev/docs/integrations/openapi/headless).
+
+#### Install the full UI
+
+The entire UI of API pages can be installed with Fumadocs CLI:
+
+```npm
+npx @fumadocs/cli add fumadocs/openapi/page
+```
+
+```tsx title="components/api-page.tsx"
+'use client';
+import { createOpenAPIPageBase } from '@/components/api/page';
+import { defaultShikiFactory } from 'fumadocs-core/highlight/shiki/full';
+
+export const OpenAPIPage = createOpenAPIPageBase({ shiki: defaultShikiFactory });
+```
+
+To customise parts of it, install `fumadocs/openapi/operation` or `fumadocs/api-docs/schema`, and pass them to the new `components` options:
+
+```tsx
+export const OpenAPIPage = createOpenAPIPage({
+  components: { Operation, SchemaUI: Schema },
+});
+```
+
+#### Render custom inline code samples
+
+Code samples from `x-codeSamples` and `generateCodeSamples` are now rendered when their id isn't a built-in generator.
+
+#### Data info tags in Schema UI
+
+`SchemaData.infoTags` entries are data rendered by the UI: `{ label, value, block? }` or `{ label, list }`. Custom nodes (`{ node }`) are still accepted, code reading `tag.node` must handle all shapes.
+
+#### Migrate options of `createOpenAPIPage()`
+
+Pass components to the `components` option:
+
+```diff
+ createOpenAPIPage({
+-  schemaUI: { render: (props) => <Schema {...props} /> },
+-  renderHeading: (props, depth) => <Heading depth={depth} {...props} />,
+-  renderCodeBlock: (props) => <CodeBlock {...props} />,
+-  renderMarkdown: (md) => <Markdown md={md} />,
++  components: { SchemaUI: Schema, Heading, CodeBlock, Markdown },
+ });
+```
+
+- `playground.provider` is removed, the page provides the auth state of API playground.
+- `playground.render` and `generateTypeScriptDefinitions` no longer receive `ctx`, read the document from `useOpenAPI().doc`, or the `doc` passed to `generateTypeScriptDefinitions`.
+- `operation.APIExampleSelector` is removed, install `fumadocs/openapi/operation` and edit the selector in `usage-tabs.tsx`.
+- The `ctx` of `content` render options holds your options with the `schema` and `proxyUrl` of page. `ctx.SchemaUI` and `ctx._default_processMarkdown` are removed, use `useComponents()` in a component.
+
+#### Migrate hooks
+
+The hooks of `fumadocs-openapi/ui` are replaced by `fumadocs-openapi/headless`:
+
+| v11                     | v12                                                              |
+| ----------------------- | ---------------------------------------------------------------- |
+| `useRenderContext()`    | `useOpenAPI()` (`schema` is renamed to `doc`), `useComponents()` |
+| `useServerContext()`    | `useServer()`                                                    |
+| `useOperationContext()` | `useOperation()`, `useExampleRequests()`, `useExampleRequest()`  |
+
+```diff
+- const { route, examples, example, setExample, setExampleData } = useOperationContext();
++ const { path } = useOperation();
++ const { items, selected, select, update } = useExampleRequests();
++ // data of the selected example, replaces `addListener()`
++ const data = useExampleRequest();
+```
+
+Components installed from v11 with Fumadocs CLI (e.g. the API playground) use the old hooks, reinstall them.
+
+#### Remove deprecated APIs
+
+| Removed                                                    | Use                                                 |
+| ---------------------------------------------------------- | --------------------------------------------------- |
+| `fumadocs-openapi/ui/create-client`                        | `createOpenAPIPage()` from `fumadocs-openapi/ui`    |
+| `ApiPageProps`                                             | `OpenAPIPageProps`                                  |
+| `OperationItem` and `WebhookItem` of `fumadocs-openapi/ui` | import them from `fumadocs-openapi`                 |
+| `getAPIPageProps()` and `getClientAPIPageProps()`          | `getOpenAPIPageProps()`                             |
+| `defineI18nOpenAPI()`                                      | `i18n.translations().extend(openapiTranslations())` |
+| `APIPage` of MDX components                                | `OpenAPIPage`, generated files only render it       |
+
+### Shared components of API pages
+
+#### Default page components
+
+`createOpenAPIPage()`, `createAsyncAPIPage()` and `createGraphQLPage()` now fill the `Markdown`, `CodeBlock` and `Heading` components you didn't pass, rendering Markdown through Remark and code blocks through the `shiki` option:
+
+```tsx
+createOpenAPIPage({
+  shiki: defaultShikiFactory,
+  components: { SchemaUI, Operation },
+});
+```
+
+`shiki` is optional — without it, code blocks render unhighlighted.
+
+#### Installable UI
+
+The UI an API page renders through is now part of the installation, instead of being imported from the package:
+
+| Component                                                                                   | Installed at                               |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `Select`, `Input`                                                                           | `components/ui`, reusing the project's own |
+| `Accordion`, `Collapsible`, `Dialog`, `Popover`, `Spinner`, `SelectTabs`, playground inputs | `components/api/ui`                        |
+| anchor IDs of deep-linkable sections                                                        | `components/api/ui/auto-anchor`            |
+
+`Select` and `Input` follow the Shadcn UI API, so a project that already has them keeps its own. `@fumadocs/story` no longer ships a second copy of either.
+
+`labelVariants` moved to the installed `label` component, leaving the input a plain Shadcn-compatible primitive.
+
+The integrations share one implementation of these internally, instead of each keeping a copy: the selected server and its variables, the state of an async request, the coloured label of methods and kinds, and the plain-object check of both schema layers.
+
+The request pipeline of the playground stays in the package too — `encodeRequestData()`, `resolveMediaAdapter()`, `createBrowserFetcher()`, `getPreferredType()` and the request data types are exported from `fumadocs-openapi/headless`, so an installed playground drives them instead of copying them.
+
+### JSON Schema toolkit
+
+#### `@fumadocs/json-schema`
+
+The JSON Schema utilities of API pages are now their own package, with no Fumadocs dependencies:
+
+```ts
+import { dereference, matches, mergeAllOf, sample, stringify } from '@fumadocs/json-schema';
+import { bundle } from '@fumadocs/json-schema/bundle';
+```
+
+`bundle()` is a separate entry because it reads files and URLs, everything else runs in the browser.
+
+`@fumadocs/json-schema/react` renders a schema into the data an API page draws — `generateSchemaUI()` with the `SchemaData` and `InfoTag` types. It was in the Schema UI before, where every install copied it.
+
+They were `@fumadocs/api-docs/schema/*` before, and the API was cleaned up while moving:
+
+| Before                                         | Now                                    |
+| ---------------------------------------------- | -------------------------------------- |
+| `ParsedSchema`                                 | `JsonSchema`                           |
+| `NoReference` / `NoReferenceSwallow`           | `Dereferenced` / `DereferencedShallow` |
+| `dereferenceShallow(schema)`                   | `dereference(schema)`                  |
+| `matchesSchema(schema, value)`                 | `matches(schema, value)`               |
+| `typeMatches(value, type)`                     | `matchesType(value, type)`             |
+| `schemaToString(schema, FormatFlags.UseAlias)` | `stringify(schema, { alias: true })`   |
+
+`fumadocs-openapi` and `@fumadocs/asyncapi` no longer export `ParsedSchema`, import `JsonSchema` from `@fumadocs/json-schema` instead.
+
+#### Opt into code usages and TypeScript definitions
+
+`createOpenAPIPage()` and `<OpenAPIProvider />` from `fumadocs-openapi/headless` no longer register the default code usage generators and TypeScript definitions, so a headless page doesn't bundle them:
+
+```tsx
+import { createCodeUsageGeneratorRegistry } from 'fumadocs-openapi/requests/generators';
+import { registerDefault } from 'fumadocs-openapi/requests/generators/all';
+
+createOpenAPIPage({
+  codeUsages: registerDefault(createCodeUsageGeneratorRegistry()),
+  components: { ... },
+});
+```
+
+`fumadocs-openapi/ui` is unchanged, it registers both for you.
+
+With that, `fumadocs-openapi/headless/base` is gone — it only existed to skip those defaults.
+
+#### Remove `useStorageKey()`
+
+The hook returned `(name) => storageKeyPrefix + name`. Read the prefix from the page instead:
+
+```tsx
+const { storageKeyPrefix } = useOpenAPI();
+localStorage.getItem(`${storageKeyPrefix}my-key`);
+```
+
+`useAsyncAPI()` works the same way.
+
+#### `@fumadocs/api-docs` is no longer published
+
+It held the UI the integrations share, and that UI is now either bundled into them or installed with Fumadocs CLI, so nothing imports it by name any more. If you imported it directly:
+
+| Before                                     | Now                                                  |
+| ------------------------------------------ | ---------------------------------------------------- |
+| `@fumadocs/api-docs/schema/*`              | `@fumadocs/json-schema`                              |
+| `@fumadocs/api-docs/components/schema*`    | `npx @fumadocs/cli add fumadocs/api-docs/schema`     |
+| `@fumadocs/api-docs/components/*` (the UI) | installed with the component that uses it            |
+| `@fumadocs/api-docs/i18n`                  | the integration's own `Translations` covers its keys |
+| `@fumadocs/api-docs/css/preset.css`        | already included by the integration's preset         |
+
+The CLI namespace is unchanged, `fumadocs/api-docs/schema` still installs the Schema UI.
+
 ## fumadocs-openapi@11.4.3
 
 ### Mark packages side-effect free
